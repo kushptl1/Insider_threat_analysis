@@ -153,3 +153,89 @@ def plot_confusion_matrix(cm):
     plt.show()
 
 plot_confusion_matrix(cm)
+
+##############################################################################################
+
+# Model #2: Support-Vector Machine with Linear & RBF kernels
+
+X = df[['size', 'recipient_count', 'hour', 'attachments']]  # Use relevant features
+y = df['anomaly']  # Target variable: anomaly (1 for anomalous, 0 for normal)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Function to plot confusion matrix heatmap
+def plot_confusion_matrix(y_true, y_pred, title):
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="coolwarm", cbar=False)
+    plt.title(f"Confusion Matrix - {title}")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.show()
+
+kernels = ['linear', 'rbf']
+
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+for kernel in kernels:
+    svm_model = SVC(kernel=kernel, C=1.0, gamma='scale')
+
+    y_pred_train = cross_val_predict(svm_model, X_train_scaled, y_train, cv=kf)
+
+    print(f"SVM with {kernel.capitalize()} Kernel (Train Set) - Classification Report:")
+    print(classification_report(y_train, y_pred_train))
+
+    plot_confusion_matrix(y_train, y_pred_train, f"SVM with {kernel.capitalize()} Kernel (Train Set)")
+
+    svm_model.fit(X_train_scaled, y_train)
+    y_pred_test = svm_model.predict(X_test_scaled)
+
+    print(f"SVM with {kernel.capitalize()} Kernel (Test Set) - Classification Report:")
+    print(classification_report(y_test, y_pred_test))
+
+    plot_confusion_matrix(y_test, y_pred_test, f"SVM with {kernel.capitalize()} Kernel (Test Set)")
+
+##############################################################################################
+
+# Model #3: Ensemble Model: Bagging of KNN and Random forest
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+knn_model = KNeighborsClassifier(n_neighbors=5)
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Ensemble model using Voting Classifier (Bagging)
+ensemble_model = VotingClassifier(estimators=[('knn', knn_model), ('rf', rf_model)], voting='hard')
+
+ensemble_model.fit(X_train_scaled, y_train)
+
+y_pred = ensemble_model.predict(X_test_scaled)
+
+print("Ensemble Model (KNN + RF) - Classification Report:")
+print(classification_report(y_test, y_pred))
+
+# Confusion Matrix
+def plot_confusion_matrix(y_true, y_pred, title):
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="coolwarm", cbar=False)
+    plt.title(f"Confusion Matrix - {title}")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.show()
+
+plot_confusion_matrix(y_test, y_pred, "Ensemble Model (KNN + RF)")
+
+##############################################################################################
+
